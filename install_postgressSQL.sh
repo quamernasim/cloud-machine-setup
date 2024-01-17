@@ -11,5 +11,7 @@ sudo apt-get update
 # If you want a specific version, use 'postgresql-12' or similar instead of 'postgresql':
 sudo apt-get -y install postgresql
 
+sudo apt-get -y install postgresql-16-pgvector
+
 #Ensure that the server is running using the systemctl start command:
 sudo systemctl start postgresql.service
