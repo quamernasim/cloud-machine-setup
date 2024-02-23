@@ -1,1 +1,2 @@
-passwd root
+passwd quamer
+
