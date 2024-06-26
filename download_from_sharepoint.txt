@@ -1,0 +1,1 @@
+wget {FILE_URL}?download=1
