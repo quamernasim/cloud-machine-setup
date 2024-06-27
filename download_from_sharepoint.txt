@@ -1,1 +1,1 @@
-wget {FILE_URL}?download=1
+wget {FILE_URL_WITHOUT_QUESTION_MARK}?download=1
