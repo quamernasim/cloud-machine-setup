@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # End-to-end interactive S3FS Mount script for Ubuntu EC2 instances.
-# Saved at /home/ubuntu/cloud-machine-setup/s3_mount_setup.sh
+# Saved at /home/ubuntu/s3-mount/cloud-machine-setup/s3_mount_setup.sh
 
 set -e
 
@@ -94,7 +94,7 @@ while true; do
 done
 
 # Step 4: Configure FUSE settings for shared access
-echo -e "\n${BLUE}[3/5] Configuring FUSE permissions${NC}"
+echo -e "\n${BLUE}[3/5] Configuring FUSE permissions & caching${NC}"
 read -rp "Do you want other users/docker containers to access this mount? (recommended) (y/n): " allow_other
 IF_ALLOW_OTHER=""
 if [[ "$allow_other" =~ ^[Yy]$ ]]; then
@@ -104,7 +104,7 @@ if [[ "$allow_other" =~ ^[Yy]$ ]]; then
 fi
 
 # Step 5: Configure Mount Point & Mount the Bucket
-echo -e "\n${BLUE}[4/5] Mounting S3 Bucket${NC}"
+echo -e "\n${BLUE}[4/5] Mounting S3 Bucket with Cache${NC}"
 while true; do
   read -rp "Enter the directory path to mount to (default: ~/s3-mount): " MOUNT_PATH
   MOUNT_PATH="${MOUNT_PATH:-~/s3-mount}"
@@ -120,8 +120,8 @@ while true; do
     fusermount -u "$MOUNT_PATH" || sudo umount "$MOUNT_PATH" || true
   fi
 
-  echo -e "Mounting s3://$BUCKET_NAME to $MOUNT_PATH..."
-  if s3fs "$BUCKET_NAME" "$MOUNT_PATH" -o "iam_role=auto${IF_ALLOW_OTHER}"; then
+  echo -e "Mounting s3://$BUCKET_NAME to $MOUNT_PATH (using local cache /tmp)..."
+  if s3fs "$BUCKET_NAME" "$MOUNT_PATH" -o "iam_role=auto,use_cache=/tmp${IF_ALLOW_OTHER}"; then
     # Give it a second to settle and verify
     sleep 2
     if mountpoint -q "$MOUNT_PATH"; then
@@ -149,6 +149,7 @@ echo -e "------------------------------------------------"
 
 echo -e "\n${GREEN}Mount Setup Completed successfully!${NC}"
 echo -e "Your S3 bucket ${BLUE}s3://$BUCKET_NAME${NC} is now attached to ${BLUE}$MOUNT_PATH${NC}."
+echo -e "Local cache is enabled at: ${BLUE}/tmp/.${BUCKET_NAME}.mirror${NC}"
 echo -e "You can now read, write, and execute files directly in this directory."
 echo -e "To unmount at any time, run: ${YELLOW}fusermount -u $MOUNT_PATH${NC}"
 echo -e "${BLUE}======================================================${NC}"
