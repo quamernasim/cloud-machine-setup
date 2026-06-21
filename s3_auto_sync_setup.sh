@@ -66,6 +66,13 @@ cat << EOF > "$RUNNER_SCRIPT"
 LOCAL_DIR="$LOCAL_DIR"
 S3_PATH="$S3_PATH"
 
+# Prevent concurrent runs of this script using flock
+LOCK_FILE="/tmp/s3_sync_\$(echo -n "\$LOCAL_DIR" | md5sum | cut -d' ' -f1).lock"
+exec 9>"\$LOCK_FILE"
+if ! flock -n 9; then
+  exit 0
+fi
+
 # Dynamic date components for nested logging
 YEAR=\$(date +%Y)
 MONTH=\$(date +%m)
@@ -77,7 +84,7 @@ LOG_DIR="\$HOME/s3_sync_logs/\$YEAR/\$MONTH/\$DAY/\$HOUR"
 mkdir -p "\$LOG_DIR"
 
 echo "=== S3 Sync Start: \$(date) ===" > "\$LOG_DIR/\${TIMESTAMP}.log"
-aws s3 sync "\$LOCAL_DIR" "\$S3_PATH" >> "\$LOG_DIR/\${TIMESTAMP}.log" 2>&1
+aws s3 sync "\$LOCAL_DIR" "\$S3_PATH" --exclude ".venv/*" --delete >> "\$LOG_DIR/\${TIMESTAMP}.log" 2>&1
 echo "=== S3 Sync End: \$(date) ===" >> "\$LOG_DIR/\${TIMESTAMP}.log"
 EOF
 
@@ -93,7 +100,7 @@ CURRENT_CRON=$(crontab -l 2>/dev/null || echo "")
 if echo "$CURRENT_CRON" | grep -Fq "$RUNNER_SCRIPT" || echo "$CURRENT_CRON" | grep -Fq "aws s3 sync $LOCAL_DIR"; then
   echo -e "${YELLOW}An automatic sync cron job for this directory/runner is already registered. Updating it...${NC}"
   # Remove the old one
-  CURRENT_CRON=$(echo "$CURRENT_CRON" | grep -Fv "$RUNNER_SCRIPT" | grep -Fv "aws s3 sync $LOCAL_DIR")
+  CURRENT_CRON=$(echo "$CURRENT_CRON" | grep -Fv "$RUNNER_SCRIPT" | grep -Fv "aws s3 sync $LOCAL_DIR" || true)
 fi
 
 # Write the new crontab
